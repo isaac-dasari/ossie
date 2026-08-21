@@ -22,8 +22,15 @@ import warnings
 import pytest
 
 from osi_omni import ConversionError, convert_osi_to_omni
-from osi_omni._common import dump_yaml
+from osi_omni._common import dump_yaml, parse_source
 from _util import REPO_ROOT, load_fixture, load_fixture_dir, parse, parse_files
+
+
+def test_structured_dataset_source_is_rejected():
+    source = {"kind": "file", "format": "parquet", "locations": ["s3://bucket/orders.parquet"]}
+
+    with pytest.raises(ConversionError, match="structured source kind.*file.*not supported"):
+        parse_source(source, "orders")
 
 
 def export(osi_yaml, **kwargs):

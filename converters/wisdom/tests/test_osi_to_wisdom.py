@@ -27,12 +27,20 @@ from ossie import (
     OSIDocument,
     OSIExpression,
     OSIField,
+    OSIFileSource,
     OSIRelationship,
     OSISemanticModel,
 )
 from ossie_wisdom import ConverterIssueType, OSIToWisdomConverter, WisdomToOSIConverter
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_export.json"
+
+
+def test_structured_dataset_source_is_rejected() -> None:
+    source = OSIFileSource(kind="file", format="parquet", locations=["s3://bucket/orders.parquet"])
+
+    with pytest.raises(TypeError, match="Structured dataset source kind.*file.*not supported"):
+        OSIToWisdomConverter()._split_source(source)
 
 
 def _snowflake(expression):

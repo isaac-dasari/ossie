@@ -50,6 +50,13 @@ from honeydew_osi.converter import (
 OSI_VERSION = "0.2.0.dev0"
 
 
+def test_structured_dataset_source_is_rejected() -> None:
+    source = {"kind": "file", "format": "parquet", "locations": ["s3://bucket/orders.parquet"]}
+
+    with pytest.raises(HoneydewConversionError, match="Structured dataset source kind.*file.*not supported"):
+        _parse_osi_source(source)
+
+
 def _osi(model_dict):
     return yaml.dump(
         {"version": OSI_VERSION, "semantic_model": [model_dict]},

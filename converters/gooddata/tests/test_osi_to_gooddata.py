@@ -26,8 +26,16 @@ import pytest
 from ossie_gooddata.osi_to_gooddata import (
     _convert_to_attribute,
     _convert_to_fact,
+    _parse_source_to_table_id,
     osi_to_gooddata,
 )
+
+
+def test_structured_dataset_source_is_rejected() -> None:
+    source = {"kind": "file", "format": "parquet", "locations": ["s3://bucket/orders.parquet"]}
+
+    with pytest.raises(TypeError, match="Structured dataset source kind.*file.*not supported"):
+        _parse_source_to_table_id(source, "default")
 
 
 def _field_with_extension(datatype: str | None, extension_type: str) -> dict:

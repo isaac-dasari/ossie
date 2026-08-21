@@ -124,13 +124,33 @@ Logical datasets represent business entities or concepts (fact and dimension tab
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Unique identifier for the dataset |
-| `source` | string | Yes | Reference to underlying physical table/view (e.g., `database.schema.table`) or query |
+| `source` | string/object | Yes | Legacy table/view/query string, or a structured file-backed source descriptor |
 | `primary_key` | array | No | Primary key columns that uniquely identify rows (single or composite) |
 | `unique_keys` | array of arrays | No | Array of unique key definitions (each can be single or composite) |
 | `description` | string | No | Human-readable description |
 | `ai_context` | string/object | No | Additional context for AI tools (e.g., synonyms, common terms) |
 | `fields` | array | No | Row-level attributes for grouping, filtering, and metric expressions |
 | `custom_extensions` | array | No | Vendor-specific attributes |
+
+### Source Forms
+
+Existing string sources remain valid and preserve current behavior:
+
+```yaml
+source: sales.public.orders
+```
+
+File-backed datasets may use an explicit structured form. `kind` is the discriminator; the initial portable file form requires a physical format and at least one location:
+
+```yaml
+source:
+  kind: file
+  format: parquet
+  locations:
+    - s3://analytics-data/orders/*.parquet
+```
+
+Locations are metadata references only. The Ossie document does not imply that every converter or consumer can read the referenced storage system; unsupported source kinds must be handled explicitly rather than silently reinterpreted as table names.
 
 ### Primary Key Examples
 

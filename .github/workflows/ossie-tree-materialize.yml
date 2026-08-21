@@ -1,0 +1,45 @@
+name: Temporary tree materializer
+
+on:
+  push:
+    branches:
+      - transport-issue-104-tree-verify
+    paths:
+      - '.ossie-transport/run'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout transport branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Materialize and verify target tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .ossie-transport/final.patch.gz /tmp/final.patch.gz
+          gzip -dc /tmp/final.patch.gz > /tmp/final.patch
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git rm -r .ossie-transport
+          git rm .github/workflows/ossie-tree-materialize.yml
+
+          git apply --check /tmp/final.patch
+          git apply --index /tmp/final.patch
+
+          expected="2d962b2db4281375412c067625c91d25743c9b22"
+          actual="$(git write-tree)"
+          echo "expected tree: ${expected}"
+          echo "actual tree:   ${actual}"
+          test "${actual}" = "${expected}"
+
+          git commit -m "Materialize verified issue 104 tree"
+          git push origin HEAD:transport-issue-104-tree-verify

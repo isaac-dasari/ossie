@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../core-spec/ossie-schema.json
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,42 +16,22 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from ossie.models import (
-    OssieAIContext,
-    OssieAIContextObject,
-    OssieCustomExtension,
-    OssieDataset,
-    OssieDataType,
-    OssieDialect,
-    OssieDialectExpression,
-    OssieDimension,
-    OssieDocument,
-    OssieExpression,
-    OssieField,
-    OssieFileSource,
-    OssieMetric,
-    OssieRelationship,
-    OssieSemanticModel,
-    OssieSource,
-    OssieVendor,
-)
+# File-backed Dataset Example
+# Demonstrates a portable structured file source without requiring object-store access.
 
-__all__ = [
-    "OssieAIContext",
-    "OssieAIContextObject",
-    "OssieCustomExtension",
-    "OssieDataset",
-    "OssieDataType",
-    "OssieDialect",
-    "OssieDialectExpression",
-    "OssieDimension",
-    "OssieDocument",
-    "OssieExpression",
-    "OssieField",
-    "OssieFileSource",
-    "OssieMetric",
-    "OssieRelationship",
-    "OssieSemanticModel",
-    "OssieSource",
-    "OssieVendor",
-]
+version: 0.2.0.dev0
+semantic_model:
+  - name: file_backed_example
+    datasets:
+      - name: events
+        source:
+          kind: file
+          format: parquet
+          locations:
+            - s3://analytics-data/events/*.parquet
+        fields:
+          - name: event_id
+            expression:
+              dialects:
+                - dialect: ANSI_SQL
+                  expression: event_id

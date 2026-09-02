@@ -88,6 +88,14 @@ converters:
       output: file
       nonempty: {type: structured_any, paths: [semantic_model]}
 
+  ontology:
+    root: converters/ontology
+    fixture: interop/fixtures/ontology_palantir
+    import:
+      command: [uv, run, --project, "{repo}/interop", --with-requirements, "{repo}/converters/ontology/requirements.lock", python, "{repo}/interop/adapters/ontology.py", import, --input, "{input}", --output, "{output}"]
+      output: file
+      nonempty: {type: structured_any, paths: [ontology, semantic_model, ontology_mappings]}
+
   omni:
     root: converters/omni
     prepare: [uv, sync, --frozen]

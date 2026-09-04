@@ -29,6 +29,8 @@ from ossie import (
     OssieExpression,
     OssieFileSource,
     OssieField,
+    OssieSQLQuerySource,
+    OssieTableSource,
 )
 
 
@@ -143,63 +145,93 @@ def test_legacy_dataset_source_remains_a_string() -> None:
     assert document.semantic_model[0].datasets[0].source == "catalog.schema.events"
 
 
-def test_file_dataset_source_survives_serialization() -> None:
+@pytest.mark.parametrize(
+    ("source_data", "source_type"),
+    [
+        (
+            {
+                "kind": "file",
+                "format": "parquet",
+                "locations": ["s3://analytics/events/*.parquet"],
+            },
+            OssieFileSource,
+        ),
+        (
+            {
+                "kind": "HIVE_CATALOG",
+                "format": "table",
+                "identifier": "analytics.sales.orders",
+            },
+            OssieTableSource,
+        ),
+        (
+            {
+                "kind": "SNOWFLAKE_CATALOG",
+                "format": "SQL_QUERY",
+                "query": "SELECT * FROM analytics.sales.orders WHERE order_total > 10",
+            },
+            OssieSQLQuerySource,
+        ),
+    ],
+)
+def test_structured_dataset_sources_survive_serialization(
+    source_data: dict, source_type: type
+) -> None:
+    data = _document()
+    data["semantic_model"][0]["datasets"][0]["source"] = source_data
+
+    document = OssieDocument.model_validate(data)
+    source = document.semantic_model[0].datasets[0].source
+    assert isinstance(source, source_type)
+
+    for serialized in (
+        json.loads(document.to_ossie_json()),
+        yaml.safe_load(document.to_ossie_yaml()),
+    ):
+        assert serialized["semantic_model"][0]["datasets"][0]["source"] == source_data
+
+
+def test_catalog_kind_is_open_ended() -> None:
     data = _document()
     data["semantic_model"][0]["datasets"][0]["source"] = {
-        "kind": "file",
-        "format": "parquet",
-        "locations": ["s3://analytics/events/*.parquet"],
+        "kind": "POLARIS_CATALOG",
+        "format": "table",
+        "identifier": "analytics.sales.orders",
     }
 
     document = OssieDocument.model_validate(data)
     source = document.semantic_model[0].datasets[0].source
-    assert isinstance(source, OssieFileSource)
-    assert source.kind == "file"
-    assert source.format == "parquet"
-    assert source.locations == ["s3://analytics/events/*.parquet"]
-
-    for serialized in (json.loads(document.to_ossie_json()), yaml.safe_load(document.to_ossie_yaml())):
-        source_data = serialized["semantic_model"][0]["datasets"][0]["source"]
-        assert source_data == {
-            "kind": "file",
-            "format": "parquet",
-            "locations": ["s3://analytics/events/*.parquet"],
-        }
+    assert isinstance(source, OssieTableSource)
+    assert source.kind == "POLARIS_CATALOG"
 
 
-def test_file_dataset_source_requires_at_least_one_location() -> None:
-    data = _document()
-    data["semantic_model"][0]["datasets"][0]["source"] = {
-        "kind": "file",
-        "format": "parquet",
-        "locations": [],
-    }
-
-    with pytest.raises(ValidationError):
-        OssieDocument.model_validate(data)
-
-
-def test_file_source_definition_matches_core_schema() -> None:
+def test_structured_source_definitions_match_core_schema() -> None:
     schema_path = Path(__file__).parents[2] / "core-spec" / "ossie-schema.json"
     schema = json.loads(schema_path.read_text())
 
     assert schema["$defs"]["Source"]["oneOf"] == [
         {"type": "string"},
         {"$ref": "#/$defs/FileSource"},
+        {"$ref": "#/$defs/TableSource"},
+        {"$ref": "#/$defs/SQLQuerySource"},
     ]
-    assert schema["$defs"]["FileSource"]["required"] == [
-        "kind",
-        "format",
-        "locations",
-    ]
+    assert schema["$defs"]["FileSource"]["required"] == ["kind", "format", "locations"]
+    assert schema["$defs"]["TableSource"]["required"] == ["kind", "format", "identifier"]
+    assert schema["$defs"]["SQLQuerySource"]["required"] == ["kind", "format", "query"]
 
 
 @pytest.mark.parametrize(
     "source",
     [
+        {"kind": "file", "format": "parquet", "locations": []},
         {"kind": "file", "format": "", "locations": ["s3://bucket/events.parquet"]},
         {"kind": "file", "format": "parquet", "locations": [""]},
-        {"kind": "table", "format": "parquet", "locations": ["s3://bucket/events.parquet"]},
+        {"kind": "HIVE_CATALOG", "format": "table", "identifier": ""},
+        {"kind": "HIVE_CATALOG", "format": "table", "query": "SELECT 1"},
+        {"kind": "SNOWFLAKE_CATALOG", "format": "SQL_QUERY", "query": ""},
+        {"kind": "SNOWFLAKE_CATALOG", "format": "SQL_QUERY", "identifier": "db.s.t"},
+        {"kind": "", "format": "table", "identifier": "db.s.t"},
+        {"kind": "HIVE_CATALOG", "format": "view", "identifier": "db.s.v"},
         {
             "kind": "file",
             "format": "parquet",
@@ -208,7 +240,7 @@ def test_file_source_definition_matches_core_schema() -> None:
         },
     ],
 )
-def test_invalid_file_dataset_source_is_rejected(source: dict) -> None:
+def test_invalid_structured_dataset_source_is_rejected(source: dict) -> None:
     data = _document()
     data["semantic_model"][0]["datasets"][0]["source"] = source
 

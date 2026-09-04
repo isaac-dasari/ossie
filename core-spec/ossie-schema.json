@@ -23,7 +23,7 @@
   "$defs": {
     "Dialect": {
       "type": "string",
-      "enum": ["ANSI_SQL", "SNOWFLAKE", "MDX", "TABLEAU", "DATABRICKS", "MAQL", "BIGQUERY"],
+      "enum": ["ANSI_SQL", "SNOWFLAKE", "MDX", "TABLEAU", "DATABRICKS", "MAQL", "BIGQUERY", "THOUGHTSPOT"],
       "description": "Supported SQL and expression language dialects"
     },
     "Vendor": {
@@ -200,11 +200,59 @@
       "required": ["kind", "format", "locations"],
       "additionalProperties": false
     },
+    "TableSource": {
+      "type": "object",
+      "description": "Structured descriptor for a table addressed through a catalog or data platform.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Catalog or platform type, for example HIVE_CATALOG or POLARIS_CATALOG."
+        },
+        "format": {
+          "type": "string",
+          "const": "table",
+          "description": "Discriminator identifying a catalog table source."
+        },
+        "identifier": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Catalog-specific table identifier, for example db.schema.table."
+        }
+      },
+      "required": ["kind", "format", "identifier"],
+      "additionalProperties": false
+    },
+    "SQLQuerySource": {
+      "type": "object",
+      "description": "Structured descriptor for a SQL query executed through a catalog or data platform.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Catalog or platform type, for example SNOWFLAKE_CATALOG."
+        },
+        "format": {
+          "type": "string",
+          "const": "SQL_QUERY",
+          "description": "Discriminator identifying a SQL query source."
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "description": "SQL query text evaluated by the named catalog or platform."
+        }
+      },
+      "required": ["kind", "format", "query"],
+      "additionalProperties": false
+    },
     "Source": {
       "description": "Dataset source. Legacy string sources remain supported for backward compatibility.",
       "oneOf": [
         {"type": "string"},
-        {"$ref": "#/$defs/FileSource"}
+        {"$ref": "#/$defs/FileSource"},
+        {"$ref": "#/$defs/TableSource"},
+        {"$ref": "#/$defs/SQLQuerySource"}
       ]
     },
     "Dataset": {

@@ -58,6 +58,7 @@ Supported SQL and expression language dialects for metrics and field definitions
 | `DATABRICKS` | Databricks SQL |
 | `MAQL` | GoodData MAQL (Metric Analysis and Query Language) |
 | `BIGQUERY` | Google BigQuery (GoogleSQL) |
+| `THOUGHTSPOT` | ThoughtSpot formula language |
 
 ### Data types
 
@@ -124,7 +125,7 @@ Logical datasets represent business entities or concepts (fact and dimension tab
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Unique identifier for the dataset |
-| `source` | string/object | Yes | Legacy table/view/query string, or a structured file-backed source descriptor |
+| `source` | string/object | Yes | Legacy table/view/query string, or a structured file, catalog table, or SQL query source descriptor |
 | `primary_key` | array | No | Primary key columns that uniquely identify rows (single or composite) |
 | `unique_keys` | array of arrays | No | Array of unique key definitions (each can be single or composite) |
 | `description` | string | No | Human-readable description |
@@ -140,7 +141,9 @@ Existing string sources remain valid and preserve current behavior:
 source: sales.public.orders
 ```
 
-File-backed datasets may use an explicit structured form. `kind` is the discriminator; the initial portable file form requires a physical format and at least one location:
+Structured sources separate the source system (`kind`) from the addressing contract (`format`). Catalog kinds are intentionally open-ended so new systems do not require a core-spec enum change.
+
+**Files** use `kind: file`, a physical file format, and one or more locations:
 
 ```yaml
 source:
@@ -150,7 +153,25 @@ source:
     - s3://analytics-data/orders/*.parquet
 ```
 
-Locations are metadata references only. The Ossie document does not imply that every converter or consumer can read the referenced storage system; unsupported source kinds must be handled explicitly rather than silently reinterpreted as table names.
+**Catalog tables** use any non-empty catalog or platform kind, `format: table`, and an identifier:
+
+```yaml
+source:
+  kind: HIVE_CATALOG
+  format: table
+  identifier: analytics.sales.orders
+```
+
+**SQL queries** use any non-empty catalog or platform kind, `format: SQL_QUERY`, and query text:
+
+```yaml
+source:
+  kind: SNOWFLAKE_CATALOG
+  format: SQL_QUERY
+  query: SELECT * FROM analytics.sales.orders WHERE order_total > 10
+```
+
+`locations`, `identifier`, and `query` are metadata references only. Ossie does not imply that every converter or consumer can access the referenced storage system or catalog. A converter that does not support a structured source must reject it explicitly rather than silently reinterpret or discard it.
 
 ### Primary Key Examples
 

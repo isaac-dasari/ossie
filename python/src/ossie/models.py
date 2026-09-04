@@ -32,6 +32,7 @@ class OssieDialect(str, Enum):
     TABLEAU = "TABLEAU"
     DATABRICKS = "DATABRICKS"
     BIGQUERY = "BIGQUERY"
+    THOUGHTSPOT = "THOUGHTSPOT"
 
 
 class OssieDataType(str, Enum):
@@ -157,7 +158,27 @@ class OssieFileSource(BaseModel):
     locations: list[Annotated[str, Field(min_length=1)]] = Field(min_length=1)
 
 
-OssieSource = Union[str, OssieFileSource]
+class OssieTableSource(BaseModel):
+    """Structured descriptor for a catalog-backed table source."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Annotated[str, Field(min_length=1)]
+    format: Literal["table"]
+    identifier: Annotated[str, Field(min_length=1)]
+
+
+class OssieSQLQuerySource(BaseModel):
+    """Structured descriptor for a catalog-backed SQL query source."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Annotated[str, Field(min_length=1)]
+    format: Literal["SQL_QUERY"]
+    query: Annotated[str, Field(min_length=1)]
+
+
+OssieSource = Union[str, OssieFileSource, OssieTableSource, OssieSQLQuerySource]
 
 
 class OssieDataset(BaseModel):

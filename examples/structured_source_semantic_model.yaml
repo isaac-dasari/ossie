@@ -16,14 +16,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# File-backed Dataset Example
-# Demonstrates a portable structured file source without requiring object-store access.
+# Structured Dataset Source Examples
 
 version: 0.2.0.dev0
 semantic_model:
-  - name: file_backed_example
+  - name: structured_source_example
     datasets:
-      - name: events
+      - name: file_events
         source:
           kind: file
           format: parquet
@@ -35,3 +34,27 @@ semantic_model:
               dialects:
                 - dialect: ANSI_SQL
                   expression: event_id
+
+      - name: catalog_orders
+        source:
+          kind: HIVE_CATALOG
+          format: table
+          identifier: analytics.sales.orders
+        fields:
+          - name: order_id
+            expression:
+              dialects:
+                - dialect: ANSI_SQL
+                  expression: order_id
+
+      - name: recent_orders
+        source:
+          kind: SNOWFLAKE_CATALOG
+          format: SQL_QUERY
+          query: SELECT * FROM analytics.sales.orders WHERE order_total > 10
+        fields:
+          - name: order_total
+            expression:
+              dialects:
+                - dialect: ANSI_SQL
+                  expression: order_total
